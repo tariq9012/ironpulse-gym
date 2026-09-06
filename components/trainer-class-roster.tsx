@@ -1,0 +1,18 @@
+'use client'
+
+import useSWR from 'swr'
+import Link from 'next/link'
+import { ArrowLeft, CalendarDays, Mail, Users } from 'lucide-react'
+
+const fetcher = (url: string) => fetch(url).then((response) => response.json())
+const dateLabel = (value: string) => new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(value))
+const timeLabel = (value: string) => new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(new Date(value))
+
+type Props = { classId: string }
+export function TrainerClassRoster({ classId }: Props) {
+  const { data, error, isLoading, mutate } = useSWR(`/api/trainer/classes/${classId}`, fetcher)
+  if (isLoading) return <main className="min-h-screen bg-background p-8"><div className="mx-auto max-w-4xl animate-pulse space-y-5"><div className="h-8 w-48 bg-card" /><div className="h-36 bg-card" /><div className="h-64 bg-card" /></div></main>
+  if (error || !data?.success) return <main className="grid min-h-screen place-items-center bg-background p-6"><div className="border border-border bg-card p-8"><p className="text-xs font-bold uppercase tracking-[.18em] text-accent">Trainer portal</p><h1 className="mt-3 font-display text-3xl font-black uppercase">Class unavailable</h1><p className="mt-3 text-sm text-muted-foreground">This class is not assigned to your trainer profile.</p><button onClick={() => mutate()} className="mt-6 bg-accent px-5 py-3 text-xs font-bold uppercase tracking-[.15em] text-accent-foreground">Try again</button></div></main>
+  const { class: session, roster } = data.data
+  return <main className="min-h-screen bg-background text-foreground"><div className="mx-auto max-w-4xl space-y-8 px-5 py-8 md:px-8"><Link href="/trainer" className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.15em] text-accent"><ArrowLeft className="size-4" /> Back to dashboard</Link><header className="border-b border-border pb-8"><p className="text-xs font-bold uppercase tracking-[.18em] text-accent">Assigned class</p><h1 className="mt-2 font-display text-4xl font-black uppercase md:text-6xl">{session.title}</h1><p className="mt-3 text-sm text-muted-foreground">{dateLabel(session.startsAt)} · {timeLabel(session.startsAt)} · {session.room}</p></header><section><div className="mb-4 flex items-end justify-between"><div><p className="text-xs font-bold uppercase tracking-[.18em] text-accent">Attendance</p><h2 className="mt-2 font-display text-3xl font-black uppercase">Booked members</h2></div><span className="inline-flex items-center gap-2 text-sm text-muted-foreground"><Users className="size-4" /> {roster.length}</span></div><div className="divide-y divide-border border border-border bg-card">{roster.map((member: { bookingId: string; userId: string; name: string | null; email: string | null; bookedAt: string }) => <div key={member.bookingId} className="flex items-center justify-between gap-4 p-5"><div><p className="font-display text-xl font-black uppercase">{member.name || 'Member'}</p><p className="mt-1 text-sm text-muted-foreground">Booked {new Date(member.bookedAt).toLocaleDateString()}</p></div>{member.email && <a href={`mailto:${member.email}`} aria-label={`Email ${member.name || 'member'}`} className="grid size-10 place-items-center border border-border text-accent hover:border-accent"><Mail className="size-4" /></a>}</div>)}{!roster.length && <div className="p-10 text-center text-sm text-muted-foreground">No active bookings for this class.</div>}</div></section><div className="border border-border bg-card p-5 text-sm text-muted-foreground"><CalendarDays className="mb-3 size-5 text-accent" />Attendance tools will be available here as trainer check-in workflows are added.</div></div></main>
+}
